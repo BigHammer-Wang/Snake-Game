@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>贪吃蛇小游戏</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #222;
+            color: #eee;
+            font-family: "微软雅黑", Arial, sans-serif;
+        }
+        #game-container {
+            margin: 20px;
+            background: #111;
+            border: 4px solid #444;
+            box-shadow: 0 0 16px #000;
+            width: 402px;
+            height: 402px;
+            position: relative;
+        }
+        #scoreboard {
+            margin: 10px 0;
+            font-size: 20px;
+        }
+        #speed-control {
+            margin-bottom: 10px;
+        }
+        #game-over {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(20,20,20,0.88);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ff4747;
+            font-size: 28px;
+            font-weight: bold;
+            z-index: 1;
+            display: none;
+        }
+        #game-over small {
+            color: #fff;
+            font-size: 18px;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h2>贪吃蛇小游戏</h2>
+    <div id="speed-control">
+        <label for="speed">蛇的速度：</label>
+        <input id="speed" type="range" min="5" max="25" value="12">
+        <span id="speed-value">12</span>
+    </div>
+    <div id="scoreboard">
+        分数：<span id="score">0</span> | 最高分：<span id="highscore">0</span>
+    </div>
+    <div id="game-container">
+        <canvas id="game" width="400" height="400"></canvas>
+        <div id="game-over">
+            游戏结束!
+            <small>按任意键重生</small>
+        </div>
+    </div>
+    <script>
+        // 基本参数
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 20;
+        const gridCount = 20;
+        let speed = 12; // 默认速度
+        // 数据
+        let snake, direction, nextDirection, food, score, highscore, gameLoop, isDead;
+
+        // 读取最高分
+        highscore = parseInt(localStorage.getItem('snake_highscore')) || 0;
+        document.getElementById('highscore').textContent = highscore;
+
+        function init() {
+            snake = [
+                {x: 8, y: 10},
+                {x: 7, y: 10},
+                {x: 6, y: 10}
+            ];
+            direction = 'right';
+            nextDirection = 'right';
+            placeFood();
+            score = 0;
+            isDead = false;
+            updateScore();
+            document.getElementById('game-over').style.display = "none";
+        }
+
+        function placeFood() {
+            while (true) {
+                food = {
+                    x: Math.floor(Math.random() * gridCount),
+                    y: Math.floor(Math.random() * gridCount)
+                };
+                if (!snake.some(seg => seg.x === food.x && seg.y === food.y)) break;
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('highscore').textContent = highscore;
+        }
+
+        function draw() {
+            ctx.fillStyle = "#222";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 画食物
+            ctx.fillStyle = "#ffb400";
+            ctx.beginPath();
+            ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2-2, 0, Math.PI*2);
+            ctx.fill();
+
+            // 画蛇
+            for (let [i, seg] of snake.entries()) {
+                ctx.fillStyle = i === 0 ? "#53fe53" : "#38a938";
+                ctx.fillRect(seg.x * gridSize+1, seg.y * gridSize+1, gridSize-2, gridSize-2);
+            }
+        }
+
+        function step() {
+            if (isDead) return;
+
+            direction = nextDirection;
+            let head = {...snake[0]};
+            switch (direction) {
+                case 'up': head.y--; break;
+                case 'down': head.y++; break;
+                case 'left': head.x--; break;
+                case 'right': head.x++; break;
+            }
+
+            // 撞墙或自咬
+            if (head.x < 0 || head.x >= gridCount || head.y < 0 || head.y >= gridCount ||
+                snake.some(seg => seg.x === head.x && seg.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            snake.unshift(head);
+
+            // 吃到食物
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                if (score > highscore) {
+                    highscore = score;
+                    localStorage.setItem('snake_highscore', highscore);
+                }
+                updateScore();
+                placeFood();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function gameOver() {
+            isDead = true;
+            document.getElementById('game-over').style.display = "flex";
+        }
+
+        function loop() {
+            if (!isDead) {
+                step();
+            }
+        }
+
+        // 控制方向
+        window.addEventListener('keydown', e => {
+            if (isDead) {
+                restart();
+                return;
+            }
+            const key = e.key;
+            if (key === "ArrowUp" || key === "w") {
+                if (direction !== 'down') nextDirection = 'up';
+            } else if (key === "ArrowDown" || key === "s") {
+                if (direction !== 'up') nextDirection = 'down';
+            } else if (key === "ArrowLeft" || key === "a") {
+                if (direction !== 'right') nextDirection = 'left';
+            } else if (key === "ArrowRight" || key === "d") {
+                if (direction !== 'left') nextDirection = 'right';
+            }
+        });
+
+        // 速度调节
+        const speedInput = document.getElementById('speed');
+        const speedValue = document.getElementById('speed-value');
+        function setSpeed(val) {
+            speed = Number(val);
+            speedValue.textContent = speed;
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(loop, 1000 / speed);
+        }
+        speedInput.addEventListener('input', e => setSpeed(e.target.value));
+
+        // 重生
+        function restart() {
+            init();
+            setSpeed(speedInput.value);
+            draw();
+        }
+
+        // 初始化
+        init();
+        setSpeed(speedInput.value);
+        draw();
+    </script>
+</body>
+</html>
