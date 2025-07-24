@@ -54,6 +54,14 @@
 </head>
 <body>
     <h2>贪吃蛇小游戏</h2>
+    <div id="difficulty-control" style="margin-bottom: 10px;">
+        <label for="difficulty">难度：</label>
+        <select id="difficulty">
+            <option value="easy">简单</option>
+            <option value="normal" selected>普通</option>
+            <option value="hard">困难</option>
+        </select>
+    </div>
     <div id="speed-control">
         <label for="speed">蛇的速度：</label>
         <input id="speed" type="range" min="5" max="25" value="12">
@@ -76,6 +84,11 @@
         const gridSize = 20;
         const gridCount = 20;
         let speed = 12; // 默认速度
+        const difficultySpeeds = {
+            easy: 8,
+            normal: 12,
+            hard: 18
+        };
         // 数据
         let snake, direction, nextDirection, food, score, highscore, gameLoop, isDead;
 
@@ -199,6 +212,8 @@
         // 速度调节
         const speedInput = document.getElementById('speed');
         const speedValue = document.getElementById('speed-value');
+        const difficultySelect = document.getElementById('difficulty');
+
         function setSpeed(val) {
             speed = Number(val);
             speedValue.textContent = speed;
@@ -207,16 +222,23 @@
         }
         speedInput.addEventListener('input', e => setSpeed(e.target.value));
 
+        function setDifficulty(level) {
+            const s = difficultySpeeds[level];
+            speedInput.value = s;
+            setSpeed(s);
+        }
+        difficultySelect.addEventListener('change', e => setDifficulty(e.target.value));
+
         // 重生
         function restart() {
             init();
-            setSpeed(speedInput.value);
+            setDifficulty(difficultySelect.value);
             draw();
         }
 
         // 初始化
         init();
-        setSpeed(speedInput.value);
+        setDifficulty(difficultySelect.value);
         draw();
     </script>
 </body>
